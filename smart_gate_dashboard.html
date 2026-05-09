@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Gate — Site Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0b0e11;
+      --surface:    #111418;
+      --border:     #1e2328;
+      --text:       #e8eaed;
+      --muted:      #5a6270;
+      --accent:     #00e5a0;
+      --accent-dim: #00e5a018;
+      --warn:       #f5a623;
+      --danger:     #ff4757;
+      --mono:       'DM Mono', monospace;
+      --sans:       'Syne', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    /* ── GRID NOISE BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── LAYOUT ── */
+    .shell {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* ── TOPBAR ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      background: #0d1014cc;
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+    }
+
+    .logo-icon svg { display: block; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .time-display {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── MAIN ── */
+    main {
+      padding: 32px;
+      display: grid;
+      gap: 24px;
+      grid-template-columns: 1fr 340px;
+      grid-template-rows: auto auto 1fr;
+      align-content: start;
+    }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    /* ── LIVE FEED PANEL ── */
+    .feed-panel {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .feed-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .feed-screen {
+      background: #080a0c;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      height: 200px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* scanline effect */
+    .feed-screen::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        #00000022 2px,
+        #00000022 4px
+      );
+      pointer-events: none;
+    }
+
+    .feed-visual {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Gate SVG illustration */
+    .gate-svg {
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .gate-arm {
+      transform-origin: left center;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .gate-arm.open {
+      transform: rotate(-90deg);
+    }
+
+    .feed-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ── STATUS BADGE ── */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 100px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      border: 1px solid;
+      transition: all 0.4s ease;
+      width: fit-content;
+    }
+
+    .status-badge.closed {
+      color: var(--muted);
+      border-color: var(--border);
+      background: transparent;
+    }
+
+    .status-badge.opening {
+      color: var(--warn);
+      border-color: var(--warn);
+      background: #f5a62314;
+      animation: badge-glow 1s ease-in-out infinite alternate;
+    }
+
+    .status-badge.open {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .status-badge.closing {
+      color: var(--danger);
+      border-color: var(--danger);
+      background: #ff475714;
+      animation: badge-glow-red 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes badge-glow {
+      from { box-shadow: 0 0 0px var(--warn); }
+      to   { box-shadow: 0 0 12px var(--warn); }
+    }
+
+    @keyframes badge-glow-red {
+      from { box-shadow: 0 0 0px var(--danger); }
+      to   { box-shadow: 0 0 12px var(--danger); }
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-badge.opening .badge-dot,
+    .status-badge.closing .badge-dot {
+      animation: blink 0.6s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    /* ── CONTROLS ── */
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1px solid;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: all 0.2s ease;
+      background: transparent;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-trigger {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .btn-trigger:hover { background: var(--accent-dim); }
+
+    .btn-reset {
+      color: var(--muted);
+      border-color: var(--border);
+    }
+    .btn-reset:hover { color: var(--text); border-color: var(--muted); }
+
+    /* ── SENSOR PANEL ── */
+    .sensor-panel {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .sensor-card {
+      background: #0e1114;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .sensor-name {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .sensor-value {
+      font-family: var(--mono);
+      font-size: 26px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .sensor-unit {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+      font-family: var(--mono);
+    }
+
+    /* ── LOG PANEL ── */
+    .log-panel {
+      grid-column: 2;
+      grid-row: 1 / 3;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .log-list::-webkit-scrollbar { width: 4px; }
+    .log-list::-webkit-scrollbar-track { background: transparent; }
+    .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+      animation: log-in 0.3s ease;
+    }
+
+    @keyframes log-in {
+      from { opacity: 0; transform: translateX(8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .log-entry:hover { background: #ffffff06; }
+
+    .log-time { color: var(--muted); }
+
+    .log-msg { color: var(--text); }
+    .log-msg.info   { color: var(--text); }
+    .log-msg.ok     { color: var(--accent); }
+    .log-msg.warn   { color: var(--warn); }
+    .log-msg.error  { color: var(--danger); }
+
+    /* ── COUNTDOWN TIMER ── */
+    .timer-row {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .timer-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    .timer-bar-wrap {
+      flex: 1;
+      margin: 0 14px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .timer-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 1s linear, background 0.5s ease;
+      width: 0%;
+    }
+
+    .timer-countdown {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+      min-width: 28px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <rect x="2" y="7" width="12" height="2" rx="1" fill="#0b0e11"/>
+          <rect x="7" y="2" width="2" height="12" rx="1" fill="#0b0e11"/>
+        </svg>
+      </div>
+      SmartGate OS
+    </div>
+    <div class="header-right">
+      <span class="time-display" id="clock">--:--:--</span>
+      <div class="status-dot"></div>
+    </div>
+  </header>
+
+  <!-- ── MAIN ── -->
+  <main>
+
+    <!-- LIVE FEED -->
+    <div class="card feed-panel">
+      <p class="section-label">Live Feed</p>
+      <div class="feed-inner">
+
+        <div class="feed-screen">
+          <div class="feed-visual">
+            <!-- Gate Illustration -->
+            <svg width="180" height="90" viewBox="0 0 180 90" class="gate-svg" id="gateSvg">
+              <!-- Ground -->
+              <rect x="10" y="78" width="160" height="3" rx="1.5" fill="#1e2328"/>
+              <!-- Left post -->
+              <rect x="10" y="30" width="10" height="48" rx="3" fill="#2a3040"/>
+              <!-- Arm -->
+              <g id="gateArm" class="gate-arm">
+                <rect x="20" y="36" width="100" height="7" rx="3.5" fill="#00e5a0"/>
+                <!-- Stripes -->
+                <rect x="30"  y="36" width="8" height="7" rx="1" fill="#0b0e11" opacity="0.3"/>
+                <rect x="50"  y="36" width="8" height="7" rx="1" fill="#0b0e11" opacity="0.3"/>
+                <rect x="70"  y="36" width="8" height="7" rx="1" fill="#0b0e11" opacity="0.3"/>
+                <rect x="90"  y="36" width="8" height="7" rx="1" fill="#0b0e11" opacity="0.3"/>
+              </g>
+              <!-- Right barrier hint -->
+              <rect x="160" y="30" width="10" height="48" rx="3" fill="#2a3040"/>
+            </svg>
+            <span class="feed-label" id="feedLabel">Gate Closed</span>
+          </div>
+        </div>
+
+        <!-- Status badge -->
+        <div id="statusBadge" class="status-badge closed">
+          <span class="badge-dot"></span>
+          <span id="statusText">Gate Closed</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-row">
+          <button class="btn btn-trigger" onclick="simulateTrigger()">Simulate Vehicle</button>
+          <button class="btn btn-reset"   onclick="resetGate()">Reset</button>
+        </div>
+
+        <!-- Countdown timer -->
+        <div class="timer-row">
+          <span class="timer-label">Auto-close</span>
+          <div class="timer-bar-wrap">
+            <div class="timer-bar" id="timerBar"></div>
+          </div>
+          <span class="timer-countdown" id="timerCount">—</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SENSOR STATS -->
+    <div class="card sensor-panel">
+      <p class="section-label">Sensor Readings</p>
+      <div class="sensor-grid">
+        <div class="sensor-card">
+          <p class="sensor-name">Distance</p>
+          <p class="sensor-value" id="distVal">—</p>
+          <p class="sensor-unit">cm</p>
+        </div>
+        <div class="sensor-card">
+          <p class="sensor-name">Gate Angle</p>
+          <p class="sensor-value" id="angleVal">0°</p>
+          <p class="sensor-unit">servo</p>
+        </div>
+        <div class="sensor-card">
+          <p class="sensor-name">Events</p>
+          <p class="sensor-value" id="evtCount">0</p>
+          <p class="sensor-unit">today</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVENT LOG -->
+    <div class="card log-panel">
+      <p class="section-label">Event Log</p>
+      <div class="log-list" id="logList"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // ── CLOCK ──
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toTimeString().slice(0, 8);
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── STATE ──
+  let state       = 'closed'; // closed | opening | open | closing
+  let eventCount  = 0;
+  let countdownId = null;
+  let angleAnim   = null;
+  let currentAngle = 0;
+
+  // ── LOGGING ──
+  function log(msg, type = 'info') {
+    const list = document.getElementById('logList');
+    const now  = new Date().toTimeString().slice(0, 8);
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type}">${msg}</span>`;
+    list.prepend(entry);
+    // keep last 40 entries
+    while (list.children.length > 40) list.removeChild(list.lastChild);
+  }
+
+  // ── SET UI STATE ──
+  function setStatus(s, labelText) {
+    state = s;
+    const badge = document.getElementById('statusBadge');
+    badge.className = 'status-badge ' + s;
+    document.getElementById('statusText').textContent = labelText;
+    document.getElementById('feedLabel').textContent  = labelText;
+  }
+
+  // ── ANIMATE GATE ARM ──
+  function animateAngle(from, to, onDone) {
+    clearInterval(angleAnim);
+    let angle = from;
+    const step = from < to ? 1 : -1;
+    angleAnim = setInterval(() => {
+      angle += step;
+      currentAngle = angle;
+      document.getElementById('angleVal').textContent = angle + '°';
+
+      // Rotate arm: 0° = closed (horizontal), 90° = open (vertical up)
+      const arm = document.getElementById('gateArm');
+      // pivot at left edge x=20, center y=39.5
+      arm.style.transformOrigin = '20px 39.5px';
+      arm.style.transform = `rotate(${-angle}deg)`;
+
+      if (angle === to) {
+        clearInterval(angleAnim);
+        if (onDone) onDone();
+      }
+    }, 12);
+  }
+
+  // ── OPEN GATE ──
+  function openGate() {
+    setStatus('opening', 'Gate Opening...');
+    log('Vehicle detected — triggering gate open', 'warn');
+
+    document.getElementById('distVal').textContent = Math.floor(Math.random() * 15 + 3);
+
+    animateAngle(currentAngle, 90, () => {
+      setStatus('open', 'Gate Open');
+      log('Gate fully open', 'ok');
+      startCountdown(5);
+    });
+  }
+
+  // ── CLOSE GATE ──
+  function closeGate() {
+    setStatus('closing', 'Gate Closing...');
+    log('Path clear — closing gate', 'warn');
+    clearTimerUI();
+
+    animateAngle(currentAngle, 0, () => {
+      setStatus('closed', 'Gate Closed');
+      document.getElementById('distVal').textContent = '—';
+      log('Gate closed successfully', 'ok');
+    });
+  }
+
+  // ── COUNTDOWN ──
+  function startCountdown(seconds) {
+    clearInterval(countdownId);
+    let remaining = seconds;
+    const bar = document.getElementById('timerBar');
+    const count = document.getElementById('timerCount');
+
+    bar.style.background  = 'var(--accent)';
+    bar.style.width = '100%';
+    count.textContent = remaining + 's';
+
+    countdownId = setInterval(() => {
+      remaining--;
+      const pct = (remaining / seconds) * 100;
+      bar.style.width = pct + '%';
+      count.textContent = remaining > 0 ? remaining + 's' : '0s';
+
+      if (remaining <= 2) bar.style.background = 'var(--danger)';
+
+      if (remaining <= 0) {
+        clearInterval(countdownId);
+        closeGate();
+      }
+    }, 1000);
+  }
+
+  function clearTimerUI() {
+    clearInterval(countdownId);
+    document.getElementById('timerBar').style.width = '0%';
+    document.getElementById('timerCount').textContent = '—';
+  }
+
+  // ── TRIGGER ──
+  function simulateTrigger() {
+    if (state !== 'closed') return;
+    eventCount++;
+    document.getElementById('evtCount').textContent = eventCount;
+    openGate();
+  }
+
+  // ── RESET ──
+  function resetGate() {
+    clearInterval(countdownId);
+    clearInterval(angleAnim);
+    clearTimerUI();
+    currentAngle = 0;
+    document.getElementById('gateArm').style.transform = 'rotate(0deg)';
+    document.getElementById('angleVal').textContent    = '0°';
+    document.getElementById('distVal').textContent     = '—';
+    setStatus('closed', 'Gate Closed');
+    log('System reset by operator', 'info');
+  }
+
+  // ── BOOT ──
+  log('SmartGate OS booted', 'ok');
+  log('HC-SR04 sensor online', 'ok');
+  log('Servo motor initialized at 0°', 'info');
+  log('Waiting for vehicle...', 'info');
+</script>
+</body>
+</html>
