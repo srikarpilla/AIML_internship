@@ -1,20 +1,19 @@
-# Smart Gate — Robotics Assignment
+ Smart Gate — Robotics Assignment
 
 A virtual "Smart Gate" system that detects vehicles using an ultrasonic sensor, opens automatically, stays open for 5 seconds, and closes only when the path is clear.
 
----
 
-## Project Structure
 
-```
+Project Structure
+
 smart-gate/
 ├── smart_gate_arduino.ino   # Part 1 — Arduino C++ code (Wokwi)
 ├── open_gate_block.js       # Part 2 — Blockly custom block definition
 ├── smart_gate_dashboard.html # Part 3 — Web dashboard UI
 └── README.md
-```
 
----
+
+
 
 ## Part 1 — Hardware Simulation (Wokwi)
 
